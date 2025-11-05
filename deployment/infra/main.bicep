@@ -30,6 +30,10 @@ var resourceToken = toLower(uniqueString(subscription().id, environmentName, loc
 var functionAppName = '${abbrs.webSitesFunctions}${appName}${resourceToken}'
 var storageAccountName = '${abbrs.storageStorageAccounts}${toLower(substring(appName, 0, min(length(appName), 9)))}${resourceToken}'
 var packageUri = 'https://github.com/FBoucher/ZipDeploy-AzFunc/releases/download/v1/ZipDeploy-package-v1.zip'
+var deploymentStorageContainerName = 'app-package-${take(functionAppName, 32)}-${take(toLower(uniqueString(functionAppName, resourceToken)), 7)}'
+
+@description('Id of the user or app to assign application roles')
+param principalId string = ''
 
 
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -38,73 +42,131 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
-
-module servicePlan 'core/host/appserviceplan.bicep' = {
+// User assigned managed identity to be used by the function app to reach storage and other dependencies
+module apiUserAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
+  name: 'apiUserAssignedIdentity'
   scope: rg
-  name: 'appserviceplan'
   params: {
-    name: '${abbrs.webServerFarms}${appName}${resourceToken}'
     location: location
+    tags: tags
+    name: '${abbrs.managedIdentityUserAssignedIdentities}api-${resourceToken}'
+  }
+}
+
+
+// Create an App Service Plan to group applications under the same payment plan and SKU
+module servicePlan 'br/public:avm/res/web/serverfarm:0.1.1' = {
+  name: 'appserviceplan'
+  scope: rg
+  params: {
+    name: '${abbrs.webServerFarms}${take(appName, 20)}${resourceToken}'
     sku: {
       name: 'EP1'
       tier: 'ElasticPremium'
     }
-    reserved: true
+    reserved: true // Set to true for Linux OS plan
+    location: location
     tags: tags
+    maximumElasticWorkerCount: 3
   }
 }
 
-module storageAccount 'core/storage/storage-account.bicep' = {
+// Backing storage for Azure functions backend API
+module storageAccount 'br/public:avm/res/storage/storage-account:0.8.3' = {
+  name: 'storage'
   scope: rg
-  name: 'storageaccount'
   params: {
     name: storageAccountName
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: false // Disable local authentication methods as per policy
+    dnsEndpointType: 'Standard'
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      defaultAction: 'Allow'
+      bypass: 'AzureServices'
+    }
+    blobServices: {
+      containers: [{name: deploymentStorageContainerName}]
+    }
+    minimumTlsVersion: 'TLS1_2'  // Enforcing TLS 1.2 for better security
     location: location
     tags: tags
   }
 }
 
 
-module logAnalytics 'core/monitor/loganalytics.bicep' = {
+// Monitor application with Azure Monitor - Log Analytics workspace
+module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
+  name: '${uniqueString(deployment().name, location)}-loganalytics'
   scope: rg
-  name: 'loganalytics'
   params: {
-    name: '${abbrs.analysisServicesServers}${appName}${resourceToken}'
+    name: '${abbrs.operationalInsightsWorkspaces}${take(appName, 20)}${resourceToken}'
     location: location
     tags: tags
+    dataRetention: 30
   }
 }
 
 
-module applicationInsights 'core/monitor/applicationinsights.bicep' = {
+// Application Insights for monitoring
+module applicationInsights 'br/public:avm/res/insights/component:0.4.1' = {
+  name: '${uniqueString(deployment().name, location)}-appinsights'
   scope: rg
-  name: 'applicationinsights'
   params: {
-    name: '${abbrs.insightsComponents}${appName}${resourceToken}'
+    name: '${abbrs.insightsComponents}${take(appName, 20)}${resourceToken}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceId: logAnalytics.outputs.id
-    dashboardName: appName
+    workspaceResourceId: logAnalytics.outputs.resourceId
+    disableLocalAuth: true
   }
 }
 
 
-module functionApp 'core/host/functions.bicep' = {
-  name: 'functionApp'
+// Define the configuration object locally to pass to the modules
+var storageEndpointConfig = {
+  enableBlob: true  // Required for AzureWebJobsStorage, .zip deployment, Event Hubs trigger and Timer trigger checkpointing
+  enableQueue: false  // Required for Durable Functions and MCP trigger
+  enableTable: false  // Required for Durable Functions and OpenAI triggers and bindings
+  enableFiles: false   // Not required, used in legacy scenarios
+  allowUserIdentityPrincipal: true   // Allow interactive user identity to access for testing and debugging
+}
+
+module api './app/api.bicep' = {
+  name: 'api'
   scope: rg
   params: {
     name: functionAppName
     location: location
-    appServicePlanId: servicePlan.outputs.id
-    runtimeName: 'dotnet-isolated'
-    extensionVersion:'~4'
-    storageAccountName: storageAccount.outputs.name
-    applicationInsightsName:  applicationInsights.outputs.name
     tags: tags
-    managedIdentity: true 
-    appSettings:{
-      WEBSITE_RUN_FROM_PACKAGE: 1
+    applicationInsightsName: applicationInsights.outputs.name
+    appServicePlanId: servicePlan.outputs.resourceId
+    runtimeName: 'dotnet-isolated'
+    runtimeVersion: '8.0'
+    storageAccountName: storageAccount.outputs.name
+    enableBlob: storageEndpointConfig.enableBlob
+    enableQueue: storageEndpointConfig.enableQueue
+    enableTable: storageEndpointConfig.enableTable
+    deploymentStorageContainerName: deploymentStorageContainerName
+    identityId: apiUserAssignedIdentity.outputs.resourceId
+    identityClientId: apiUserAssignedIdentity.outputs.clientId
+    appSettings: {
     }
+  }
+}
+
+// Consolidated Role Assignments
+module rbac 'app/rbac.bicep' = {
+  name: 'rbacAssignments'
+  scope: rg
+  params: {
+    storageAccountName: storageAccount.outputs.name
+    appInsightsName: applicationInsights.outputs.name
+    managedIdentityPrincipalId: apiUserAssignedIdentity.outputs.principalId
+    userIdentityPrincipalId: principalId
+    enableBlob: storageEndpointConfig.enableBlob
+    enableQueue: storageEndpointConfig.enableQueue
+    enableTable: storageEndpointConfig.enableTable
+    allowUserIdentityPrincipal: storageEndpointConfig.allowUserIdentityPrincipal
   }
 }
 
@@ -118,12 +180,18 @@ module azFuncZipDeploy 'core/host/site-extension.bicep' = {
     packageUri: packageUri
   }
   dependsOn: [
-    functionApp
+    api
   ]
 }
 
 
+// App outputs
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_FUNCTIONAPP_URI string = functionApp.outputs.uri
-output STORAGE_ACCOUNT_NAME string = storageAccountName 
+output AZURE_FUNCTIONAPP_URI string = 'https://${api.outputs.SERVICE_API_NAME}.azurewebsites.net'
+output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
+output AZURE_FUNCTION_NAME string = functionAppName
+output AZURE_RESOURCE_GROUP string = rg.name
+output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
+output AZURE_STORAGE_CONTAINER_NAME string = deploymentStorageContainerName 
