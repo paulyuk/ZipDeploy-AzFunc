@@ -3,15 +3,16 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 param sku object
+param reserved bool = false
 
-// WINDOWS Service Plan
+// Service Plan (supports both Windows and Linux)
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: name
   location: location
   tags: tags
   sku: sku
   properties: {
-    computeMode: 'Dynamic'
+    reserved: reserved
   }
 }
 

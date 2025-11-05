@@ -46,9 +46,10 @@ module servicePlan 'core/host/appserviceplan.bicep' = {
     name: '${abbrs.webServerFarms}${appName}${resourceToken}'
     location: location
     sku: {
-      name: 'Y1'
-      tier: 'Dynamic'
+      name: 'EP1'
+      tier: 'ElasticPremium'
     }
+    reserved: true
     tags: tags
   }
 }
@@ -105,11 +106,6 @@ module functionApp 'core/host/functions.bicep' = {
       WEBSITE_RUN_FROM_PACKAGE: 1
     }
   }
-  dependsOn: [
-    servicePlan
-    storageAccount
-    applicationInsights
-  ]
 }
 
 
