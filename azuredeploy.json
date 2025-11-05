@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "523123976904596067"
+      "templateHash": "11923657681709892819"
     }
   },
   "parameters": {
@@ -184,7 +184,6 @@
     "resourceToken": "[toLower(uniqueString(subscription().id, parameters('environmentName'), parameters('location')))]",
     "functionAppName": "[format('{0}{1}{2}', variables('abbrs').webSitesFunctions, parameters('appName'), variables('resourceToken'))]",
     "storageAccountName": "[format('{0}{1}{2}', variables('abbrs').storageStorageAccounts, toLower(substring(parameters('appName'), 0, min(length(parameters('appName')), 9))), variables('resourceToken'))]",
-    "packageUri": "https://github.com/FBoucher/ZipDeploy-AzFunc/releases/download/v1/ZipDeploy-package-v1.zip",
     "deploymentStorageContainerName": "[format('app-package-{0}-{1}', take(variables('functionAppName'), 32), take(toLower(uniqueString(variables('functionAppName'), variables('resourceToken'))), 7))]",
     "storageEndpointConfig": {
       "enableBlob": true,
@@ -8643,7 +8642,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "16359659065957448489"
+              "templateHash": "684347883709101722"
             }
           },
           "parameters": {
@@ -8769,7 +8768,7 @@
                     }
                   },
                   "appSettingsKeyValuePairs": {
-                    "value": "[union(parameters('appSettings'), if(parameters('enableBlob'), createObject('AzureWebJobsStorage__blobServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.blob), createObject()), if(parameters('enableQueue'), createObject('AzureWebJobsStorage__queueServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.queue), createObject()), if(parameters('enableTable'), createObject('AzureWebJobsStorage__tableServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.table), createObject()), if(parameters('enableFile'), createObject('AzureWebJobsStorage__fileServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.file), createObject()), createObject('AzureWebJobsStorage__credential', 'managedidentity', 'AzureWebJobsStorage__clientId', parameters('identityClientId'), 'APPLICATIONINSIGHTS_AUTHENTICATION_STRING', variables('applicationInsightsIdentity'), 'APPLICATIONINSIGHTS_CONNECTION_STRING', if(not(empty(parameters('applicationInsightsName'))), coalesce(tryGet(tryGet(if(not(empty(parameters('applicationInsightsName'))), reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02', 'full'), null()), 'properties'), 'ConnectionString'), ''), ''), 'FUNCTIONS_EXTENSION_VERSION', parameters('extensionVersion'), 'FUNCTIONS_WORKER_RUNTIME', parameters('runtimeName'), 'WEBSITE_RUN_FROM_PACKAGE', format('https://{0}.blob.{1}/{2}/ZipDeploy-package-v1.zip', parameters('storageAccountName'), environment().suffixes.storage, parameters('deploymentStorageContainerName')), 'WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID', parameters('identityId')))]"
+                    "value": "[union(parameters('appSettings'), if(parameters('enableBlob'), createObject('AzureWebJobsStorage__blobServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.blob), createObject()), if(parameters('enableQueue'), createObject('AzureWebJobsStorage__queueServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.queue), createObject()), if(parameters('enableTable'), createObject('AzureWebJobsStorage__tableServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.table), createObject()), if(parameters('enableFile'), createObject('AzureWebJobsStorage__fileServiceUri', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').primaryEndpoints.file), createObject()), createObject('AzureWebJobsStorage__credential', 'managedidentity', 'AzureWebJobsStorage__clientId', parameters('identityClientId'), 'APPLICATIONINSIGHTS_AUTHENTICATION_STRING', variables('applicationInsightsIdentity'), 'APPLICATIONINSIGHTS_CONNECTION_STRING', if(not(empty(parameters('applicationInsightsName'))), coalesce(tryGet(tryGet(if(not(empty(parameters('applicationInsightsName'))), reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02', 'full'), null()), 'properties'), 'ConnectionString'), ''), ''), 'FUNCTIONS_EXTENSION_VERSION', parameters('extensionVersion'), 'FUNCTIONS_WORKER_RUNTIME', parameters('runtimeName'), 'WEBSITE_RUN_FROM_PACKAGE', format('https://{0}.blob.{1}/{2}/functions.zip', parameters('storageAccountName'), environment().suffixes.storage, parameters('deploymentStorageContainerName')), 'WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID', parameters('identityId')))]"
                   }
                 },
                 "template": {
@@ -14395,67 +14394,6 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', format('{0}-appinsights', uniqueString(deployment().name, parameters('location'))))]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage')]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "azFuncZipDeploy",
-      "resourceGroup": "[format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "functionAppName": {
-            "value": "[variables('functionAppName')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "packageUri": {
-            "value": "[variables('packageUri')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.38.33.27573",
-              "templateHash": "7398376149362197409"
-            },
-            "description": "Creates an Azure Apps extension for ZipDeploy."
-          },
-          "parameters": {
-            "functionAppName": {
-              "type": "string"
-            },
-            "location": {
-              "type": "string",
-              "defaultValue": "[resourceGroup().location]"
-            },
-            "packageUri": {
-              "type": "string"
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Web/sites/extensions",
-              "apiVersion": "2021-03-01",
-              "name": "[format('{0}/{1}', parameters('functionAppName'), 'zipdeploy')]",
-              "properties": {
-                "packageUri": "[parameters('packageUri')]"
-              }
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'api')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName')))]"
       ]
     }
   ],

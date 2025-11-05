@@ -2,7 +2,7 @@
 
 name: ZipDeploy-AzFunc
 metadata:
-  template: ZipDeploy-AzFunc@1.0.0
+  template: ZipDeploy-AzFunc@1.0.1
 services:
   api:
     project: ./src/
