@@ -1,3 +1,4 @@
+
 # Zip Deploy Azure Function - Modernized with Azure Developer CLI
 
 This project demonstrates how to deploy an Azure Function using **ZipDeploy with enhanced security** and modern infrastructure practices. The solution has been **modernized to favor the recommended Azure Developer CLI (azd) approach** for deployment, while maintaining support for traditional ARM template deployment.
@@ -14,6 +15,21 @@ The **preferred method** uses Azure Developer CLI with automated zip deployment 
 - 🎯 **Azure Verified Modules (AVM)**: Enterprise-grade, Microsoft-maintained infrastructure templates
 - 🔑 **Zero Secrets**: All authentication uses Azure Active Directory identities
 - 📦 **Automated Deployment**: Builds, packages, and deploys in one command
+
+
+### Pre-requisites
+
+Before you begin, ensure the following tools are installed locally:
+
+- **Azure CLI (`az`)**: [Install Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+- **Azure Developer CLI (`azd`)**: [Install Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/cli/install-azure-developer-cli)
+- **Azure Functions Core Tools (`func`)**: [Install Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local#install-the-azure-functions-core-tools)
+
+After installation, sign in to your Azure account:
+
+```sh
+az login
+```
 
 ### **Quick Start:**
 ```bash
