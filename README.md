@@ -69,6 +69,10 @@ The deployment process uses automated scripts that can be adapted for various CI
 - **Azure DevOps**: Compatible with Azure CLI tasks
 - **Any CI/CD Tool**: Works with any system that supports Azure CLI
 
+### Testing the deployed function
+
+From the Azure Portal, navigate to your deployed Function App. You can find the function URL in the "Functions" section. Click on the URL, or copy-paste it to your browser to test the function. You should see a blue screen with a message "Your Functions 4.0 app is up and running". That means your function App is deployed. To test the api append `/api/GetAdventurers` to the URL to see the function response consisting of a list of 20 adventurers in JSON format.
+
 ## 📋 **Alternative: ARM Template Deployment**
 
 For scenarios where you need direct ARM template deployment, you can still use the one-click deployment button. **Note**: This method requires you to upload your zip file separately after infrastructure deployment.
